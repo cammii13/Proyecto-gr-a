@@ -155,4 +155,7 @@ async def main():
     await server.wait_closed()
 
 # Ejecutar el servidor
-asyncio.run(main())
+try:
+    asyncio.run(main())
+except KeyboardInterrupt:
+    print("\nServidor web detenido desde el teclado.")

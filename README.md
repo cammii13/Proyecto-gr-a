@@ -71,6 +71,38 @@ La comunicación UART utiliza mensajes de texto simples terminados en nueva lín
 - **Validación de Comandos**: Solo comandos válidos son procesados; comandos desconocidos son ignorados.
 - **Interfaz Segura**: La interfaz web requiere conexión WiFi y no expone puertos adicionales.
 
+## Flujo de Inicio del ESP32 (boot.py)
+
+El archivo `boot.py` implementa un menú interactivo que se ejecuta al iniciar el ESP32. Este menú permite elegir entre dos modos:
+
+### Menú de Inicio
+```
+========================================
+      SISTEMA DE CONTROL - GRÚA TORRE
+========================================
+1. Iniciar sistema normalmente (Modo Ejecución)
+2. Detener en modo programación (Liberar REPL)
+Selecciona una opción (Avanza a opción 1 en 5s)...
+```
+
+- **Opción 1 (o timeout)**: El ESP32 se conecta a WiFi automáticamente y carga el servidor web desde `main.py`.
+- **Opción 2**: Detiene la ejecución automática del script y libera la consola REPL de MicroPython para programación interactiva.
+- **Timeout**: Si no se selecciona nada en 5 segundos, el sistema avanza automáticamente a la opción 1 (ideal para operación autónoma).
+
+## Servidor Web del ESP32 (main.py)
+
+El archivo `main.py` implementa un servidor web asíncrono que:
+- Expone una interfaz HTML interactiva para control remoto de la grúa.
+- Recibe comandos desde la web y los envía al Arduino Nano vía UART.
+- Implementa control de tres ejes: carro (izquierda/derecha), elevación (arriba/abajo), giro (izquierda/derecha).
+- Incluye botón de emergencia (PARAR) que detiene todos los motores instantáneamente.
+
+### Características de la Interfaz Web
+- Diseño responsive en tema oscuro (azul #121212).
+- Botones de fácil acceso para cada eje de movimiento.
+- Feedback visual con cambio de color en botones presionados.
+- Mostrador de estado en tiempo real.
+
 ## Instrucciones de Instalación
 
 ### Requisitos Previos
@@ -83,7 +115,11 @@ La comunicación UART utiliza mensajes de texto simples terminados en nueva lín
 1. Conecta el ESP32 a tu PC vía USB.
 2. Usa Thonny IDE para subir `boot.py` y `main.py` al dispositivo.
 3. Edita `boot.py` con tus credenciales WiFi (SSID y PASSWORD).
-4. Reinicia el ESP32; se conectará automáticamente a WiFi y levantará el servidor en puerto 80.
+4. Reinicia el ESP32:
+   - Se mostrará el menú de inicio por 5 segundos.
+   - Presiona **1** para inicio normal (o espera al timeout).
+   - Presiona **2** si deseas entrar en modo programación (libera REPL).
+5. Una vez conectado a WiFi, el servidor web estará disponible en `http://<IP_ESP32>/`.
 
 ### Instalación Arduino
 1. Abre `arduino/grúa_arduino.ino` en Arduino IDE.
@@ -94,8 +130,10 @@ La comunicación UART utiliza mensajes de texto simples terminados en nueva lín
 ### Configuración del Sistema
 1. Conecta UART: ESP32 TX (GPIO 17) a Arduino RX (D0).
 2. Alimenta ambos dispositivos.
-3. Accede a la IP del ESP32 desde un navegador para la interfaz web.
-4. Prueba controles remotos y verifica LEDs de status.
+3. Al iniciar, se mostrará el menú en el serial (115200 bauds).
+4. Selecciona modo o espera al timeout.
+5. Accede a la IP del ESP32 desde un navegador para la interfaz web.
+6. Prueba controles remotos y verifica LEDs de status.
 
 ### Solución de Problemas
 - Si no conecta WiFi, verifica credenciales en `boot.py`.
