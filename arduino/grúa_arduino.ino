@@ -15,6 +15,12 @@
 // Crear instancia del stepper
 AccelStepper stepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
 
+// Configuración de pasos: ajustar según microstepping del DRV8825 (ej. 1, 2, 4, 8, 16)
+const long STEPS_PER_REV = 200; // 200 pasos por vuelta para un Nema 17 (sin microstepping)
+
+// Telemetría: último ángulo enviado
+long lastSentAngle = 0x7fffffff;
+
 // Variables para control
 unsigned long lastCommandTime = 0;
 const unsigned long TIMEOUT = 2000; // 2 segundos
@@ -53,6 +59,18 @@ void loop() {
   // Ejecutar movimiento del stepper si activo
   if (giroActive) {
     stepper.runSpeed();
+  }
+
+  // Calcular ángulo actual en grados (no bloqueante) y enviar por Serial si cambió
+  long pos = stepper.currentPosition();
+  float angle_f = (pos * 360.0) / (float)STEPS_PER_REV; // posición a grados
+  long angleInt = (long)angle_f; // enviar como entero
+  long normalizedAngle = angleInt % 360;
+  if (normalizedAngle < 0) normalizedAngle += 360;
+  if (normalizedAngle != lastSentAngle) {
+    Serial.print("ANG:");
+    Serial.println(normalizedAngle);
+    lastSentAngle = normalizedAngle;
   }
 
   // Frenado automático por timeout
