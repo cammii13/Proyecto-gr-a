@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - Grúa Torre</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --panel-bg: rgba(22, 30, 49, 0.7);
+            --border-color: rgba(148, 163, 184, 0.12);
+            --accent-blue: #38bdf8;
+            --accent-orange: #fb923c;
+            --accent-red: #f43f5e;
+            --text-light: #f8fafc;
+            --text-muted: #64748b;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 20px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.06) 0%, transparent 45%),
+                radial-gradient(circle at 85% 85%, rgba(251, 146, 60, 0.06) 0%, transparent 45%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 440px;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            text-align: center;
+            margin: 0 0 10px 0;
+            background: linear-gradient(135deg, #38bdf8 0%, #fb923c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background-color: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-group h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-light);
+            margin: 0 0 12px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        button {
+            padding: 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            font-family: inherit;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            background-color: rgba(30, 41, 59, 0.6);
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: rgba(51, 65, 85, 0.8);
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+            transform: translateY(-1px);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+
+        button:disabled {
+            background-color: rgba(15, 23, 42, 0.4);
+            color: #475569;
+            border-color: rgba(148, 163, 184, 0.05);
+            cursor: not-allowed;
+        }
+
+        .stop-button {
+            background-color: rgba(244, 63, 94, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+            grid-column: span 2;
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .stop-button:hover:not(:disabled) {
+            background-color: rgba(244, 63, 94, 0.35);
+            border-color: rgba(244, 63, 94, 0.6);
+            box-shadow: 0 0 15px rgba(244, 63, 94, 0.3);
+        }
+
+        /* Switch Toggle */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+        }
+
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            transition: .3s;
+            border-radius: 30px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #cbd5e1;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: rgba(251, 146, 60, 0.25);
+            border-color: rgba(251, 146, 60, 0.5);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+            background-color: var(--accent-orange);
+            box-shadow: 0 0 8px rgba(251, 146, 60, 0.6);
+        }
+
+        .status-box {
+            padding: 12px 16px;
+            background-color: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            text-align: center;
+            color: #38bdf8;
+            font-weight: 500;
+            margin-top: 5px;
+            min-height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.3s;
+        }
+
+        /* Telemetría y Brújula */
+        .telemetry-card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+        }
+
+        #gauge {
+            filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.15));
+        }
+
+        .gauge-text {
+            margin-top: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-light);
+            text-align: center;
+        }
+
+        footer {
+            margin-top: 20px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        /* Utilidades */
+        .flex-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .mode-text {
+            font-weight: 800;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            transition: color 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Grúa Torre</h1>
+        <div class="subtitle">Panel de Control y Telemetría</div>
+
+        <!-- CARD SELECTOR DE MODO -->
+        <div class="card" style="padding: 16px 24px; margin-bottom: 15px;">
+            <div class="flex-center" style="justify-content: space-between;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--accent-orange);">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M12 17V12"></path>
+                        <path d="M12 8H12.01"></path>
+                    </svg>
+                    <span style="font-weight: 600; font-size: 0.95rem;">Modo de Control</span>
+                </div>
+                <div class="flex-center" style="gap: 8px;">
+                    <span class="mode-text" id="modeTextWeb" style="color: var(--accent-blue);">WEB</span>
+                    <label class="switch">
+                        <input type="checkbox" id="modeToggle" onchange="toggleControlMode(this)">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="mode-text" id="modeTextManual" style="color: var(--text-muted);">MANUAL</span>
+                </div>
+            </div>
+            <div id="modeStatus" style="font-size: 0.8rem; color: var(--accent-blue); text-align: right; margin-top: 8px; font-weight: 600;">Control desde Web Activo</div>
+        </div>
+
+        <!-- CARD DE BOTONES DE CONTROL -->
+        <div class="card">
+            <div class="control-group">
+                <h2>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"></path>
+                    </svg> Carro Horizontal
+                </h2>
+                <div class="button-grid">
+                    <button id="btnCarLeft" onclick="sendCommand('car_left')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>
+                        Izquierda
+                    </button>
+                    <button id="btnCarRight" onclick="sendCommand('car_right')">
+                        Derecha
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h2>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12l7-7 7 7"></path>
+                    </svg> Elevación Gancho
+                </h2>
+                <div class="button-grid">
+                    <button id="btnElevUp" onclick="sendCommand('elev_up')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>
+                        Subir
+                    </button>
+                    <button id="btnElevDown" onclick="sendCommand('elev_down')">
+                        Bajar
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12l7 7-7-7"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h2>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+                    </svg> Giro Pluma
+                </h2>
+                <div class="button-grid">
+                    <button id="btnGiroLeft" onclick="sendCommand('giro_left')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 14H9m0 0V8m0 6L21 2M9 20a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path></svg>
+                        Girar Izq
+                    </button>
+                    <button id="btnGiroRight" onclick="sendCommand('giro_right')">
+                        Girar Der
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 14h6m0 0V8m0 6L3 2M15 20a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="control-group" style="margin-top: 10px;">
+                <div class="button-grid">
+                    <button id="btnStop" class="stop-button" onclick="sendCommand('stop')">PARAR MOTOR</button>
+                </div>
+            </div>
+
+            <div class="status-box" id="status">Listo para operar</div>
+        </div>
+
+        <!-- CARD DE TELEMETRÍA -->
+        <div class="telemetry-card">
+            <svg id="gauge" width="180" height="180" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#38bdf8" />
+                        <stop offset="100%" stop-color="#fb923c" />
+                    </linearGradient>
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                
+                <!-- Circunferencia exterior -->
+                <circle cx="100" cy="100" r="88" fill="none" stroke="#1e293b" stroke-width="4" />
+                <circle cx="100" cy="100" r="82" fill="#0f172a" />
+                
+                <!-- Marcas de cuadrante -->
+                <circle cx="100" cy="100" r="76" fill="none" stroke="#334155" stroke-dasharray="2, 8" stroke-width="3" />
+                
+                <!-- Marcas Cardinales -->
+                <text x="100" y="38" font-size="10" font-weight="800" fill="#64748b" text-anchor="middle">0°/N</text>
+                <text x="162" y="103" font-size="10" font-weight="800" fill="#64748b" text-anchor="middle">90°/E</text>
+                <text x="100" y="170" font-size="10" font-weight="800" fill="#64748b" text-anchor="middle">180°/S</text>
+                <text x="38" y="103" font-size="10" font-weight="800" fill="#64748b" text-anchor="middle">270°/O</text>
+
+                <!-- Aguja de Orientación -->
+                <g transform="translate(100,100)">
+                    <line id="needle" x1="0" y1="0" x2="0" y2="-68" stroke="url(#grad)" stroke-width="5" stroke-linecap="round" filter="url(#glow)" style="transform-box: fill-box; transform-origin: center center; transition: transform 0.2s ease-out;" />
+                    <circle cx="0" cy="0" r="7" fill="#f8fafc" stroke="#1e293b" stroke-width="2" />
+                    <circle cx="0" cy="0" r="3" fill="#0f172a" />
+                </g>
+            </svg>
+            <div class="gauge-text" id="angleLabel">Orientación de la Pluma: 0°</div>
+        </div>
+
+        <footer>
+            Proyecto de Grado — Milagros Llusca — Mayo 2026
+        </footer>
+    </div>
+
+    <script>
+        let currentNeedleAngle = 0;
+        let currentMode = "web";
+
+        function normalizeAngle(angle) {
+            return ((angle % 360) + 360) % 360;
+        }
+
+        function rotateNeedle(targetAngle) {
+            const normalized = normalizeAngle(targetAngle);
+            const diff = ((normalized - currentNeedleAngle + 540) % 360) - 180;
+            currentNeedleAngle = normalizeAngle(currentNeedleAngle + diff);
+            const needle = document.getElementById('needle');
+            if (needle) {
+                needle.style.transform = 'rotate(' + currentNeedleAngle + 'deg)';
+            }
+        }
+
+        async function sendCommand(cmd) {
+            if (currentMode === "manual" && cmd !== "mode_web" && cmd !== "mode_manual") {
+                return; // Ignorar si está en manual
+            }
+            try {
+                const response = await fetch(`/control?cmd=${cmd}`);
+                if (response.ok) {
+                    document.getElementById('status').textContent = `Comando enviado: ${cmd}`;
+                } else {
+                    document.getElementById('status').textContent = `Error al enviar comando: ${cmd}`;
+                }
+            } catch (error) {
+                document.getElementById('status').textContent = 'Error de comunicación';
+            }
+        }
+
+        async function toggleControlMode(checkbox) {
+            const cmd = checkbox.checked ? "mode_manual" : "mode_web";
+            checkbox.disabled = true;
+            try {
+                const response = await fetch(`/control?cmd=${cmd}`);
+                if (response.ok) {
+                    document.getElementById('status').textContent = `Cambiando modo a: ${checkbox.checked ? 'MANUAL' : 'WEB'}`;
+                    updateUIForMode(checkbox.checked ? "manual" : "web");
+                } else {
+                    document.getElementById('status').textContent = 'Error al cambiar modo';
+                    checkbox.checked = !checkbox.checked;
+                }
+            } catch (error) {
+                document.getElementById('status').textContent = 'Error de conexión';
+                checkbox.checked = !checkbox.checked;
+            } finally {
+                checkbox.disabled = false;
+            }
+        }
+
+        function updateUIForMode(mode) {
+            currentMode = mode;
+            const toggle = document.getElementById('modeToggle');
+            const modeStatus = document.getElementById('modeStatus');
+            const buttons = document.querySelectorAll('#btnCarLeft, #btnCarRight, #btnElevUp, #btnElevDown, #btnGiroLeft, #btnGiroRight, #btnStop');
+            const webLabel = document.getElementById('modeTextWeb');
+            const manualLabel = document.getElementById('modeTextManual');
+
+            if (mode === "manual") {
+                toggle.checked = true;
+                modeStatus.textContent = "Control Manual por Joysticks Activo";
+                modeStatus.style.color = "var(--accent-orange)";
+                webLabel.style.color = "var(--text-muted)";
+                manualLabel.style.color = "var(--accent-orange)";
+
+                // Deshabilitar botones de control
+                buttons.forEach(btn => btn.disabled = true);
+            } else {
+                toggle.checked = false;
+                modeStatus.textContent = "Control desde Web Activo";
+                modeStatus.style.color = "var(--accent-blue)";
+                webLabel.style.color = "var(--accent-blue)";
+                manualLabel.style.color = "var(--text-muted)";
+
+                // Habilitar botones de control
+                buttons.forEach(btn => btn.disabled = false);
+            }
+        }
+
+        // Telemetría: consultar estado periódicamente
+        async function fetchTelemetry() {
+            try {
+                const resp = await fetch('/telemetry');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                
+                // Actualizar ángulo de pluma
+                const angle = normalizeAngle(data.angle);
+                const label = document.getElementById('angleLabel');
+                if (label) label.textContent = 'Orientación de la Pluma: ' + angle + '°';
+                rotateNeedle(angle);
+                
+                // Sincronizar interruptor de modo si difiere
+                if (data.mode && data.mode !== currentMode) {
+                    updateUIForMode(data.mode);
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        fetchTelemetry();
+        setInterval(fetchTelemetry, 250);
+    </script>
+</body>
+</html>

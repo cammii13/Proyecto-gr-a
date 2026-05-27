@@ -1,6 +1,4 @@
-#include <AccelStepper.h>
-
-// Pines para motores DC (TB6612FNG)
+// Pines para motores DC (TB6612FNG 1)
 #define AIN1 2   // Motor A (Carro) - Dirección 1
 #define AIN2 4   // Motor A (Carro) - Dirección 2
 #define PWMA 3   // Motor A (Carro) - PWM
@@ -8,108 +6,198 @@
 #define BIN2 8   // Motor B (Elevación) - Dirección 2
 #define PWMB 5   // Motor B (Elevación) - PWM
 
-// Pines para motor Nema 17 (DRV8825)
-#define STEP_PIN 9
-#define DIR_PIN 10
+// Pines para motor DC (TB6612FNG 2)
+#define CIN1 11  // Motor C (Giro) - Dirección 1
+#define CIN2 12  // Motor C (Giro) - Dirección 2
+#define PWMC 9   // Motor C (Giro) - PWM
 
-// Crear instancia del stepper
-AccelStepper stepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
+// Pines para Joysticks
+#define JOY_CARRO A0     // Joystick 1 Eje X -> Carro
+#define JOY_GIRO A2      // Joystick 1 Eje Y -> Giro
+#define JOY_ELEVACION A1  // Joystick 2 Eje X -> Elevación
+#define BTN_MODE 6       // Pulsador Joystick 2 -> Conmutador de Modo
 
-// Configuración de pasos: ajustar según microstepping del DRV8825 (ej. 1, 2, 4, 8, 16)
-const long STEPS_PER_REV = 200; // 200 pasos por vuelta para un Nema 17 (sin microstepping)
+// Velocidades máximas configurables para cada motor (rango PWM: 0 a 255)
+const int MAX_SPEED_CARRO = 255;
+const int MAX_SPEED_ELEVACION = 255;
+const int MAX_SPEED_GIRO = 255;
 
-// Telemetría: último ángulo enviado
-long lastSentAngle = 0x7fffffff;
+// Configuración de Joystick
+const int DEADZONE = 30; // Zona muerta analógica para filtrar el ruido
 
-// Variables para control
+// Estado del sistema
+bool manualMode = false; // false = Modo Web (por defecto), true = Modo Manual (Joysticks)
+int currentGiroSpeed = 0; // Velocidad de giro actual para estimación de ángulo
+float estimatedAngle = 0.0; // Ángulo estimado en punto flotante
+long lastSentAngle = -1; // Último ángulo reportado por Serial
+
+// Telemetría y Seguridad
 unsigned long lastCommandTime = 0;
-const unsigned long TIMEOUT = 2000; // 2 segundos
-bool giroActive = false;
-int giroDirection = 0; // 0: stop, 1: left, -1: right
+const unsigned long TIMEOUT = 2000; // 2 segundos de inactividad para frenado automático en modo Web
+const unsigned long DEBOUNCE_DELAY = 50; // Retardo de anti-rebote (ms)
+
+// Variables para debouncing del botón físico
+int currentButtonState = HIGH;
+int lastButtonState = HIGH;
+unsigned long lastDebounceTime = 0;
 
 void setup() {
-  // Configurar pines motores DC
+  // Configurar pines de dirección y PWM de motores como salidas
   pinMode(AIN1, OUTPUT);
   pinMode(AIN2, OUTPUT);
   pinMode(PWMA, OUTPUT);
   pinMode(BIN1, OUTPUT);
   pinMode(BIN2, OUTPUT);
   pinMode(PWMB, OUTPUT);
+  pinMode(CIN1, OUTPUT);
+  pinMode(CIN2, OUTPUT);
+  pinMode(PWMC, OUTPUT);
 
-  // Configurar stepper
-  stepper.setMaxSpeed(1000.0);
-  stepper.setAcceleration(500.0);
+  // Configurar pin del botón con resistencia pull-up interna
+  pinMode(BTN_MODE, INPUT_PULLUP);
 
   // Iniciar comunicación serial
   Serial.begin(9600);
 
   // Inicializar motores detenidos
   stopAllMotors();
+  
+  // Enviar estado inicial del modo
+  sendModeUpdate();
 }
 
 void loop() {
-  // Leer comandos seriales
+  unsigned long now = millis();
+  
+  // 1. Debounce y lectura del botón físico (D6)
+  int reading = digitalRead(BTN_MODE);
+  if (reading != lastButtonState) {
+    lastDebounceTime = now;
+  }
+  
+  if ((now - lastDebounceTime) > DEBOUNCE_DELAY) {
+    if (reading != currentButtonState) {
+      currentButtonState = reading;
+      // Transición a presionado (el pin pasa a LOW cuando se pulsa)
+      if (currentButtonState == LOW) {
+        manualMode = !manualMode;
+        sendModeUpdate();
+        stopAllMotors();
+      }
+    }
+  }
+  lastButtonState = reading;
+
+  // 2. Procesar comandos seriales
   if (Serial.available()) {
     String command = Serial.readStringUntil('\n');
     command.trim();
     processCommand(command);
-    lastCommandTime = millis();
+    lastCommandTime = now;
   }
 
-  // Ejecutar movimiento del stepper si activo
-  if (giroActive) {
-    stepper.runSpeed();
+  // 3. Control de motores según el modo activo
+  if (manualMode) {
+    // Lectura de los Joysticks físicos
+    int devCarro = analogRead(JOY_CARRO) - 512;
+    int devElev = analogRead(JOY_ELEVACION) - 512;
+    int devGiro = analogRead(JOY_GIRO) - 512;
+
+    int speedCarro = mapJoystick(devCarro, MAX_SPEED_CARRO);
+    int speedElev = mapJoystick(devElev, MAX_SPEED_ELEVACION);
+    int speedGiro = mapJoystick(devGiro, MAX_SPEED_GIRO);
+
+    setMotorA(speedCarro);
+    setMotorB(speedElev);
+    setMotorC(speedGiro);
+  } else {
+    // Frenado automático por timeout en modo Web
+    if (now - lastCommandTime > TIMEOUT) {
+      stopAllMotors();
+    }
   }
 
-  // Calcular ángulo actual en grados (no bloqueante) y enviar por Serial si cambió
-  long pos = stepper.currentPosition();
-  float angle_f = (pos * 360.0) / (float)STEPS_PER_REV; // posición a grados
-  long angleInt = (long)angle_f; // enviar como entero
-  long normalizedAngle = angleInt % 360;
-  if (normalizedAngle < 0) normalizedAngle += 360;
-  if (normalizedAngle != lastSentAngle) {
+  // 4. Estimación del ángulo de rotación de la pluma (Giro)
+  static unsigned long lastAngleTime = 0;
+  if (lastAngleTime == 0) lastAngleTime = now;
+  unsigned long dt = now - lastAngleTime;
+  lastAngleTime = now;
+
+  if (currentGiroSpeed != 0) {
+    // A velocidad máxima (PWM 255), gira a 30 RPM (180 grados por segundo)
+    // El factor de velocidad es lineal respecto al PWM aplicado
+    float speedFactor = (float)currentGiroSpeed / 255.0;
+    estimatedAngle += speedFactor * 180.0 * ((float)dt / 1000.0);
+
+    // Normalizar ángulo entre [0, 360)
+    if (estimatedAngle >= 360.0) estimatedAngle -= 360.0;
+    if (estimatedAngle < 0.0) estimatedAngle += 360.0;
+  }
+
+  long angleInt = (long)estimatedAngle;
+  if (angleInt != lastSentAngle) {
     Serial.print("ANG:");
-    Serial.println(normalizedAngle);
-    lastSentAngle = normalizedAngle;
-  }
-
-  // Frenado automático por timeout
-  if (millis() - lastCommandTime > TIMEOUT) {
-    stopAllMotors();
+    Serial.println(angleInt);
+    lastSentAngle = angleInt;
   }
 }
 
+// Mapea la lectura del joystick analógico a un rango de velocidad PWM respetando la velocidad máxima
+int mapJoystick(int dev, int maxSpeed) {
+  if (abs(dev) < DEADZONE) {
+    return 0;
+  }
+  int sign = (dev > 0) ? 1 : -1;
+  int absDev = abs(dev);
+  // Mapear el rango [DEADZONE, 512] a [0, maxSpeed]
+  int speed = map(absDev, DEADZONE, 512, 0, maxSpeed);
+  if (speed > maxSpeed) {
+    speed = maxSpeed;
+  }
+  return sign * speed;
+}
+
+// Envía el estado actual del modo de control al ESP32
+void sendModeUpdate() {
+  if (manualMode) {
+    Serial.println("MOD:MANUAL");
+  } else {
+    Serial.println("MOD:WEB");
+  }
+}
+
+// Procesa los comandos serie recibidos del ESP32
 void processCommand(String cmd) {
-  if (cmd == "CL") {
-    // Carro izquierda
-    setMotorA(-255); // Velocidad máxima hacia atrás
-  } else if (cmd == "CR") {
-    // Carro derecha
-    setMotorA(255); // Velocidad máxima hacia adelante
-  } else if (cmd == "EU") {
-    // Elevación arriba
-    setMotorB(255);
-  } else if (cmd == "ED") {
-    // Elevación abajo
-    setMotorB(-255);
-  } else if (cmd == "GL") {
-    // Giro izquierda
-    giroDirection = -1;
-    stepper.setSpeed(-500.0); // Velocidad negativa para izquierda
-    giroActive = true;
-  } else if (cmd == "GR") {
-    // Giro derecha
-    giroDirection = 1;
-    stepper.setSpeed(500.0); // Velocidad positiva para derecha
-    giroActive = true;
-  } else if (cmd == "S") {
-    // Stop
+  if (cmd == "MM") {
+    manualMode = true;
+    sendModeUpdate();
     stopAllMotors();
+  } else if (cmd == "MW") {
+    manualMode = false;
+    sendModeUpdate();
+    stopAllMotors();
+  } else if (!manualMode) {
+    // Comandos de movimiento sólo permitidos en modo Web
+    if (cmd == "CL") {
+      setMotorA(-MAX_SPEED_CARRO);
+    } else if (cmd == "CR") {
+      setMotorA(MAX_SPEED_CARRO);
+    } else if (cmd == "EU") {
+      setMotorB(MAX_SPEED_ELEVACION);
+    } else if (cmd == "ED") {
+      setMotorB(-MAX_SPEED_ELEVACION);
+    } else if (cmd == "GL") {
+      setMotorC(-MAX_SPEED_GIRO);
+    } else if (cmd == "GR") {
+      setMotorC(MAX_SPEED_GIRO);
+    } else if (cmd == "S") {
+      stopAllMotors();
+    }
   }
 }
 
+// Controla el Motor A (Carro)
 void setMotorA(int speed) {
-  // speed: -255 a 255
   if (speed > 0) {
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
@@ -125,8 +213,8 @@ void setMotorA(int speed) {
   }
 }
 
+// Controla el Motor B (Elevación)
 void setMotorB(int speed) {
-  // speed: -255 a 255
   if (speed > 0) {
     digitalWrite(BIN1, HIGH);
     digitalWrite(BIN2, LOW);
@@ -142,9 +230,29 @@ void setMotorB(int speed) {
   }
 }
 
+// Controla el Motor C (Giro)
+void setMotorC(int speed) {
+  if (speed > 0) {
+    digitalWrite(CIN1, HIGH);
+    digitalWrite(CIN2, LOW);
+    analogWrite(PWMC, speed);
+    currentGiroSpeed = speed;
+  } else if (speed < 0) {
+    digitalWrite(CIN1, LOW);
+    digitalWrite(CIN2, HIGH);
+    analogWrite(PWMC, -speed);
+    currentGiroSpeed = speed;
+  } else {
+    digitalWrite(CIN1, LOW);
+    digitalWrite(CIN2, LOW);
+    analogWrite(PWMC, 0);
+    currentGiroSpeed = 0;
+  }
+}
+
+// Detiene todos los motores
 void stopAllMotors() {
   setMotorA(0);
   setMotorB(0);
-  giroActive = false;
-  giroDirection = 0;
+  setMotorC(0);
 }

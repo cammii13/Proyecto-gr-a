@@ -13,8 +13,9 @@ uart = UART(2, tx=Pin(UART_TX_PIN), rx=Pin(16), baudrate=BAUDRATE)
 led = Pin(LED_PIN, Pin.OUT)
 led.value(1)  # Encender LED al inicio
 
-# Telemetría: ángulo actual leído desde Arduino (en grados)
+# Telemetría
 current_angle = 0
+control_mode = "web"  # "web" o "manual"
 
 # Comandos según estándar OpenSpec (ejemplo simplificado)
 COMMANDS = {
@@ -24,7 +25,9 @@ COMMANDS = {
     'elev_down': 'ED',   # Elevación abajo
     'giro_left': 'GL',   # Giro izquierda
     'giro_right': 'GR',  # Giro derecha
-    'stop': 'S'          # Parar todos los motores
+    'stop': 'S',         # Parar todos los motores
+    'mode_manual': 'MM', # Activar modo manual (joysticks)
+    'mode_web': 'MW'     # Activar modo web
 }
 
 def send_to_uart(cmd):
@@ -50,8 +53,8 @@ def parse_cmd(request_str):
 
 
 async def uart_reader_task():
-    """Lee continuamente el UART y actualiza la variable global `current_angle` cuando llega 'ANG:<valor>\n'."""
-    global current_angle
+    """Lee continuamente el UART y actualiza el ángulo y modo."""
+    global current_angle, control_mode
     while True:
         try:
             await asyncio.sleep_ms(20)
@@ -69,139 +72,26 @@ async def uart_reader_task():
                         current_angle = val
                     except Exception:
                         pass
+                elif s == 'MOD:MANUAL':
+                    control_mode = "manual"
+                    print("Modo de control actualizado: MANUAL")
+                elif s == 'MOD:WEB':
+                    control_mode = "web"
+                    print("Modo de control actualizado: WEB")
         except Exception as e:
             print('uart_reader_task error', e)
 
 def get_html():
     """
-    Genera el HTML de la interfaz web.
+    Lee el archivo index.html del sistema de archivos local.
     """
-    html = """
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control Grúa Torre</title>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; }
-        .container { max-width: 400px; margin: auto; }
-        .control-group { margin: 20px 0; }
-        .control-group h2 { margin-bottom: 10px; color: #ffffff; }
-        .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { padding: 20px; font-size: 18px; border: none; border-radius: 10px; background-color: #333333; color: #ffffff; cursor: pointer; transition: background-color 0.3s; }
-        button:hover { background-color: #555555; }
-        button:active { background-color: #777777; }
-        .stop-button { background-color: #dc3545; grid-column: span 2; }
-        .stop-button:hover { background-color: #c82333; }
-        .status { margin-top: 20px; padding: 10px; background-color: #1e1e1e; border: 1px solid #333333; border-radius: 5px; color: #ffffff; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Control de Grúa Torre</h1>
-        <div class="control-group">
-            <h2>Carro</h2>
-            <div class="button-grid">
-                <button onclick="sendCommand('car_left')">Izquierda</button>
-                <button onclick="sendCommand('car_right')">Derecha</button>
-            </div>
-        </div>
-        <div class="control-group">
-            <h2>Elevación</h2>
-            <div class="button-grid">
-                <button onclick="sendCommand('elev_up')">Arriba</button>
-                <button onclick="sendCommand('elev_down')">Abajo</button>
-            </div>
-        </div>
-        <div class="control-group">
-            <h2>Giro</h2>
-            <div class="button-grid">
-                <button onclick="sendCommand('giro_left')">Izquierda</button>
-                <button onclick="sendCommand('giro_right')">Derecha</button>
-            </div>
-        </div>
-        <div class="control-group">
-            <button class="stop-button" onclick="sendCommand('stop')">PARAR</button>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
-            <div class="status" id="status">Listo</div>
-            <div class="telemetry" style="margin-top:10px;width:100%;background:#1b1b1b;border:1px solid #333;padding:12px;border-radius:8px;">
-                <div style="display:flex;align-items:center;gap:12px;justify-content:center;flex-direction:column;">
-                    <svg id="gauge" width="220" height="220" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stop-color="#ff9800" />
-                                <stop offset="100%" stop-color="#f44336" />
-                            </linearGradient>
-                        </defs>
-                        <circle cx="100" cy="100" r="88" fill="#121212" stroke="#333" stroke-width="3" />
-                        <!-- ticks 0..360 every 30deg -->
-                        <g transform="translate(100,100)">
-                        </g>
-                        <!-- Needle group centered at 100,100 -->
-                        <g transform="translate(100,100)">
-                            <line id="needle" x1="0" y1="0" x2="0" y2="-70" stroke="url(#grad)" stroke-width="6" stroke-linecap="round" style="transform-box: fill-box; transform-origin: center center; transition: transform 0.18s ease-out;" />
-                            <circle cx="0" cy="0" r="6" fill="#fff" />
-                        </g>
-                    </svg>
-                    <div id="angleLabel" style="color:#fff;font-size:20px;font-weight:600;">Orientación de la Pluma: 0°</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <script>
-        let currentNeedleAngle = 0;
+    try:
+        with open('index.html', 'r') as f:
+            return f.read()
+    except Exception as e:
+        print("Error al leer index.html:", e)
+        return "<html><body><h1>Error 500: Archivo index.html no encontrado en la memoria del dispositivo</h1></body></html>"
 
-        function normalizeAngle(angle) {
-            return ((angle % 360) + 360) % 360;
-        }
-
-        function rotateNeedle(targetAngle) {
-            const normalized = normalizeAngle(targetAngle);
-            const diff = ((normalized - currentNeedleAngle + 540) % 360) - 180;
-            currentNeedleAngle = normalizeAngle(currentNeedleAngle + diff);
-            const needle = document.getElementById('needle');
-            if (needle) {
-                needle.style.transform = 'rotate(' + currentNeedleAngle + 'deg)';
-            }
-        }
-
-        async function sendCommand(cmd) {
-            try {
-                const response = await fetch(`/control?cmd=${cmd}`);
-                if (response.ok) {
-                    document.getElementById('status').textContent = `Comando enviado: ${cmd}`;
-                } else {
-                    document.getElementById('status').textContent = `Error al enviar comando: ${cmd}`;
-                }
-            } catch (error) {
-                document.getElementById('status').textContent = 'Error de comunicación';
-            }
-        }
-
-        // Telemetría: consultar ángulo cada 200ms
-        async function fetchAngle() {
-            try {
-                const resp = await fetch('/telemetry');
-                if (!resp.ok) return;
-                const data = await resp.json();
-                const angle = normalizeAngle(data.angle);
-                const label = document.getElementById('angleLabel');
-                if (label) label.textContent = 'Orientación de la Pluma: ' + angle + '°';
-                rotateNeedle(angle);
-            } catch (e) {
-                // ignore
-            }
-        }
-
-        fetchAngle();
-        setInterval(fetchAngle, 200);
-    </script>
-</body>
-</html>
-    """
-    return html
 
 async def handle_client(reader, writer):
     """
@@ -216,8 +106,8 @@ async def handle_client(reader, writer):
             html = get_html()
             response = f"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n{html}"
         elif request_str.startswith('GET /telemetry'):
-            # Endpoint de telemetría: devolver ángulo actual en JSON
-            response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n" + ujson.dumps({"angle": current_angle})
+            # Endpoint de telemetría: devolver ángulo y modo actual en JSON
+            response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n" + ujson.dumps({"angle": current_angle, "mode": control_mode})
         elif request_str.startswith('GET /control?'):
             # Procesar comando
             cmd = parse_cmd(request_str)
