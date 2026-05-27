@@ -1,3 +1,5 @@
+#include <SoftwareSerial.h>
+
 // Pines para motores DC (TB6612FNG 1)
 #define AIN1 2   // Motor A (Carro) - Dirección 1
 #define AIN2 4   // Motor A (Carro) - Dirección 2
@@ -17,6 +19,11 @@
 #define JOY_ELEVACION A1  // Joystick 2 Eje X -> Elevación
 #define BTN_MODE 6       // Pulsador Joystick 2 -> Conmutador de Modo
 
+// Puerto Serie por Software para depuración hacia el ESP32
+// D10 = RX (no usado para transmitir, pero requerido por SoftwareSerial)
+// D13 = TX (conecta al RX GPIO 16 del ESP32)
+SoftwareSerial debugSerial(10, 13);
+
 // Velocidades máximas configurables para cada motor (rango PWM: 0 a 255)
 const int MAX_SPEED_CARRO = 255;
 const int MAX_SPEED_ELEVACION = 255;
@@ -29,7 +36,7 @@ const int DEADZONE = 30; // Zona muerta analógica para filtrar el ruido
 bool manualMode = false; // false = Modo Web (por defecto), true = Modo Manual (Joysticks)
 int currentGiroSpeed = 0; // Velocidad de giro actual para estimación de ángulo
 float estimatedAngle = 0.0; // Ángulo estimado en punto flotante
-long lastSentAngle = -1; // Último ángulo reportado por Serial
+long lastSentAngle = 0; // Último ángulo reportado por Serial
 
 // Telemetría y Seguridad
 unsigned long lastCommandTime = 0;
@@ -56,8 +63,12 @@ void setup() {
   // Configurar pin del botón con resistencia pull-up interna
   pinMode(BTN_MODE, INPUT_PULLUP);
 
-  // Iniciar comunicación serial
+  // Iniciar comunicación serial principal (USB) a 9600 bps
   Serial.begin(9600);
+
+  // Iniciar puerto de depuración por software (hacia el ESP32) a 9600 bps
+  debugSerial.begin(9600);
+  debugSerial.println("[SYSTEM] Iniciando sistema de grúa torre...");
 
   // Inicializar motores detenidos
   stopAllMotors();
@@ -88,7 +99,7 @@ void loop() {
   }
   lastButtonState = reading;
 
-  // 2. Procesar comandos seriales
+  // 2. Procesar comandos seriales desde USB
   if (Serial.available()) {
     String command = Serial.readStringUntil('\n');
     command.trim();
@@ -125,7 +136,6 @@ void loop() {
 
   if (currentGiroSpeed != 0) {
     // A velocidad máxima (PWM 255), gira a 30 RPM (180 grados por segundo)
-    // El factor de velocidad es lineal respecto al PWM aplicado
     float speedFactor = (float)currentGiroSpeed / 255.0;
     estimatedAngle += speedFactor * 180.0 * ((float)dt / 1000.0);
 
@@ -136,9 +146,8 @@ void loop() {
 
   long angleInt = (long)estimatedAngle;
   if (angleInt != lastSentAngle) {
-    Serial.print("ANG:");
-    Serial.println(angleInt);
     lastSentAngle = angleInt;
+    sendTelemetry();
   }
 }
 
@@ -149,7 +158,6 @@ int mapJoystick(int dev, int maxSpeed) {
   }
   int sign = (dev > 0) ? 1 : -1;
   int absDev = abs(dev);
-  // Mapear el rango [DEADZONE, 512] a [0, maxSpeed]
   int speed = map(absDev, DEADZONE, 512, 0, maxSpeed);
   if (speed > maxSpeed) {
     speed = maxSpeed;
@@ -157,41 +165,60 @@ int mapJoystick(int dev, int maxSpeed) {
   return sign * speed;
 }
 
-// Envía el estado actual del modo de control al ESP32
+// Envía la telemetría en formato JSON a través del puerto serie principal USB (Serial)
+void sendTelemetry() {
+  Serial.print("{\"angle\":");
+  Serial.print(lastSentAngle);
+  Serial.print(",\"mode\":\"");
+  Serial.print(manualMode ? "manual" : "web");
+  Serial.println("\"}");
+}
+
+// Envía el estado actual del modo de control al depurador
 void sendModeUpdate() {
+  sendTelemetry();
   if (manualMode) {
-    Serial.println("MOD:MANUAL");
+    debugSerial.println("[SYSTEM] Modo cambiado a MANUAL.");
   } else {
-    Serial.println("MOD:WEB");
+    debugSerial.println("[SYSTEM] Modo cambiado a WEB.");
   }
 }
 
-// Procesa los comandos serie recibidos del ESP32
+// Procesa los comandos serie recibidos de la laptop por USB
 void processCommand(String cmd) {
   if (cmd == "MM") {
     manualMode = true;
     sendModeUpdate();
     stopAllMotors();
+    debugSerial.println("[CMD] Modo cambiado a MANUAL.");
   } else if (cmd == "MW") {
     manualMode = false;
     sendModeUpdate();
     stopAllMotors();
+    debugSerial.println("[CMD] Modo cambiado a WEB.");
   } else if (!manualMode) {
     // Comandos de movimiento sólo permitidos en modo Web
     if (cmd == "CL") {
       setMotorA(-MAX_SPEED_CARRO);
+      debugSerial.println("[CMD] Carro a la IZQUIERDA.");
     } else if (cmd == "CR") {
       setMotorA(MAX_SPEED_CARRO);
+      debugSerial.println("[CMD] Carro a la DERECHA.");
     } else if (cmd == "EU") {
       setMotorB(MAX_SPEED_ELEVACION);
+      debugSerial.println("[CMD] Elevación ARRIBA.");
     } else if (cmd == "ED") {
       setMotorB(-MAX_SPEED_ELEVACION);
+      debugSerial.println("[CMD] Elevación ABAJO.");
     } else if (cmd == "GL") {
       setMotorC(-MAX_SPEED_GIRO);
+      debugSerial.println("[CMD] Giro a la IZQUIERDA.");
     } else if (cmd == "GR") {
       setMotorC(MAX_SPEED_GIRO);
+      debugSerial.println("[CMD] Giro a la DERECHA.");
     } else if (cmd == "S") {
       stopAllMotors();
+      debugSerial.println("[CMD] Motores DETENIDOS.");
     }
   }
 }
