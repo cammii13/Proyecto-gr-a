@@ -7,25 +7,39 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #0f172a;
-            --panel-bg: rgba(30, 41, 59, 0.7);
-            --border-color: rgba(148, 163, 184, 0.15);
-            --accent-yellow: #facc15;
-            --accent-blue: #38bdf8;
-            --accent-green: #4ade80;
-            --accent-orange: #fb923c;
-            --text-light: #f8fafc;
-            --text-muted: #94a3b8;
+            --bg-dark: #0a1428;
+            --bg-accent: #1a2847;
+            --panel-bg: rgba(26, 40, 71, 0.8);
+            --border-color: rgba(100, 150, 200, 0.25);
+            --accent-gold: #ffd700;
+            --accent-blue: #4da6ff;
+            --accent-light-blue: #66b3ff;
+            --text-light: #f0f4f9;
+            --text-muted: #a8b8cc;
             --wire-gnd: #4b5563;
             --wire-vcc: #ef4444;
         }
 
+        * {
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
         body {
-            background-color: var(--bg-dark);
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-accent) 100%);
             color: var(--text-light);
             font-family: 'Outfit', sans-serif;
             margin: 0;
-            padding: 30px 15px;
+            padding: 40px 15px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -38,32 +52,36 @@
             position: fixed;
             inset: 0;
             background-image:
-                radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 90% 80%, rgba(74, 222, 128, 0.05) 0%, transparent 50%);
+                radial-gradient(circle at 10% 20%, rgba(77, 166, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(255, 215, 0, 0.05) 0%, transparent 50%);
             pointer-events: none;
             z-index: 0;
         }
 
         h1 {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 800;
-            color: var(--accent-yellow);
-            margin: 0 0 10px 0;
+            color: var(--accent-gold);
+            margin: 0 0 8px 0;
             text-align: center;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
+            letter-spacing: 2px;
             position: relative;
             z-index: 1;
+            animation: slideUp 0.8s ease-out;
+            text-shadow: 0 4px 12px rgba(255, 215, 0, 0.15);
         }
 
         .subtitle {
             color: var(--text-muted);
-            font-size: 1rem;
-            margin-bottom: 30px;
+            font-size: 1.05rem;
+            margin-bottom: 40px;
             text-align: center;
-            max-width: 600px;
+            max-width: 700px;
             position: relative;
             z-index: 1;
+            animation: slideUp 0.8s ease-out 0.1s both;
+            line-height: 1.6;
         }
 
         .container {
@@ -89,22 +107,44 @@
             border-radius: 16px;
             border: 1px solid var(--border-color);
             padding: 24px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
             display: flex;
             flex-direction: column;
-            transition: border-color 0.3s;
+            transition: all 0.3s ease;
+            animation: slideUp 0.8s ease-out 0.2s both;
+        }
+
+        .card:hover {
+            border-color: rgba(100, 150, 200, 0.4);
+            box-shadow: 0 15px 50px rgba(77, 166, 255, 0.15);
         }
 
         .card h2 {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: 600;
             margin: 0 0 20px 0;
-            color: var(--accent-blue);
+            color: var(--accent-light-blue);
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+
+        /* COMPONENTES INTERACTIVOS DEL SVG */
+        .component-box {
+            fill: #1a2847;
+            stroke: #4d6ba0;
+            stroke-width: 2.5;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .component-box:hover {
+            fill: #2a3e5f;
+            stroke: var(--accent-gold);
+            stroke-width: 3;
+            filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.3));
         }
 
         /* DISEÑO ESQUEMÁTICO INTERACTIVO EN SVG */
@@ -113,10 +153,10 @@
             overflow-x: auto;
             display: flex;
             justify-content: center;
-            background: #090d16;
+            background: rgba(10, 20, 40, 0.6);
             border-radius: 12px;
             padding: 15px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(100, 150, 200, 0.2);
         }
 
         svg {
@@ -125,19 +165,12 @@
             display: block;
         }
 
-        /* Estilos de elementos de circuito */
-        .component-box {
-            fill: #1e293b;
-            stroke: #475569;
-            stroke-width: 2.5;
-            transition: all 0.3s ease;
-        }
-
         .component-title {
             font-weight: 800;
             font-size: 12px;
             fill: var(--text-light);
             text-anchor: middle;
+            transition: all 0.3s ease;
         }
 
         .pin-label {
@@ -160,14 +193,140 @@
         }
 
         /* Colores por función de cable */
-        .wire-vcc-logic { stroke: #ef4444; } /* 5V / 3.3V */
-        .wire-vcc-power { stroke: #e11d48; stroke-dasharray: 4, 3; } /* 9V/12V Motores */
-        .wire-gnd { stroke: #4b5563; } /* Tierra */
-        .wire-uart { stroke: #eab308; } /* UART RX/TX */
-        .wire-signal-a { stroke: #3b82f6; } /* Carro */
-        .wire-signal-b { stroke: #10b981; } /* Elevacion */
-        .wire-signal-c { stroke: #8b5cf6; } /* Giro */
-        .wire-btn { stroke: #ec4899; } /* Botón */
+        .wire-vcc-logic { stroke: #ef4444; }
+        .wire-vcc-power { stroke: #e11d48; stroke-dasharray: 4, 3; }
+        .wire-gnd { stroke: #4b5563; }
+        .wire-uart { stroke: #eab308; }
+        .wire-signal-a { stroke: #3b82f6; }
+        .wire-signal-b { stroke: #10b981; }
+        .wire-signal-c { stroke: #8b5cf6; }
+        .wire-btn { stroke: #ec4899; }
+
+        /* MODAL STYLES */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.3s ease-out;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal.show {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, var(--bg-accent) 0%, rgba(26, 40, 71, 0.95) 100%);
+            padding: 30px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            animation: slideUp 0.4s ease-out;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: var(--accent-gold);
+            font-size: 1.6rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: var(--accent-gold);
+            transform: rotate(90deg);
+        }
+
+        .component-image {
+            width: 100%;
+            height: 250px;
+            object-fit: contain;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            background: rgba(10, 20, 40, 0.4);
+            border: 1px solid var(--border-color);
+        }
+
+        .component-model {
+            color: var(--accent-light-blue);
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .component-description {
+            color: var(--text-light);
+            line-height: 1.7;
+            margin-bottom: 18px;
+            font-size: 0.95rem;
+        }
+
+        .component-specs {
+            background: rgba(10, 20, 40, 0.3);
+            border-left: 3px solid var(--accent-gold);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .component-specs h4 {
+            margin: 0 0 10px 0;
+            color: var(--accent-gold);
+            font-size: 0.95rem;
+        }
+
+        .component-specs ul {
+            margin: 0;
+            padding-left: 20px;
+            list-style: none;
+        }
+
+        .component-specs li {
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            padding-left: 8px;
+            position: relative;
+        }
+
+        .component-specs li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--accent-gold);
+        }
 
         /* TABLA DE CONEXIONES */
         .table-wrapper {
@@ -185,8 +344,8 @@
         }
 
         th {
-            background-color: #0f172a;
-            color: var(--accent-blue);
+            background: linear-gradient(135deg, rgba(77, 166, 255, 0.2) 0%, rgba(255, 215, 0, 0.1) 100%);
+            color: var(--accent-gold);
             font-weight: 600;
             padding: 12px 16px;
             border-bottom: 2px solid var(--border-color);
@@ -194,37 +353,38 @@
 
         td {
             padding: 10px 16px;
-            border-bottom: 1px solid var(--border-color);
-            color: #e2e8f0;
+            border-bottom: 1px solid rgba(100, 150, 200, 0.1);
+            color: var(--text-light);
         }
 
         tr:hover {
-            background-color: rgba(51, 65, 85, 0.4);
+            background-color: rgba(77, 166, 255, 0.08);
         }
 
         .tag {
             display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
             font-size: 0.75rem;
             font-weight: 600;
             text-transform: uppercase;
+            transition: all 0.3s ease;
         }
 
-        .tag-vcc { background-color: rgba(239, 68, 68, 0.2); color: #f87171; }
-        .tag-gnd { background-color: rgba(75, 85, 99, 0.2); color: #9ca3af; }
-        .tag-sig { background-color: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-        .tag-uart { background-color: rgba(234, 179, 8, 0.2); color: #facc15; }
-        .tag-power { background-color: rgba(225, 29, 72, 0.2); color: #fb7185; }
+        .tag-vcc { background-color: rgba(239, 68, 68, 0.2); color: #ff9999; }
+        .tag-gnd { background-color: rgba(100, 150, 200, 0.2); color: #99c5ff; }
+        .tag-sig { background-color: rgba(77, 166, 255, 0.2); color: #99d4ff; }
+        .tag-uart { background-color: rgba(255, 215, 0, 0.2); color: #ffd700; }
+        .tag-power { background-color: rgba(225, 29, 72, 0.2); color: #ff7a99; }
 
         /* Información del Hover */
         .info-panel {
-            background-color: #0f172a;
+            background: rgba(10, 20, 40, 0.4);
             border-radius: 8px;
             padding: 15px;
             margin-top: 15px;
             font-size: 0.85rem;
-            border: 1px solid rgba(148, 163, 184, 0.2);
+            border: 1px solid rgba(100, 150, 200, 0.2);
             min-height: 80px;
             display: flex;
             flex-direction: column;
@@ -233,7 +393,7 @@
 
         .info-title {
             font-weight: bold;
-            color: var(--accent-yellow);
+            color: var(--accent-gold);
             margin-bottom: 6px;
             font-size: 1rem;
         }
@@ -246,20 +406,31 @@
             justify-content: center;
             position: relative;
             z-index: 1;
+            animation: slideUp 0.8s ease-out 0.15s both;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .legend-item:hover {
+            color: var(--text-light);
         }
 
         .legend-color {
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
             border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .legend-item:hover .legend-color {
+            box-shadow: 0 0 8px currentColor;
         }
 
         .search-container {
@@ -268,21 +439,26 @@
 
         .search-input {
             width: 100%;
-            padding: 10px 14px;
+            padding: 12px 14px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            background: rgba(15, 23, 42, 0.6);
-            color: #f8fafc;
+            background: rgba(10, 20, 40, 0.4);
+            color: var(--text-light);
             font-family: inherit;
             font-size: 0.85rem;
             outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            transition: all 0.3s ease;
             box-sizing: border-box;
         }
 
         .search-input:focus {
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.15);
+            background: rgba(10, 20, 40, 0.6);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
         }
 
         .row-count {
@@ -293,13 +469,25 @@
         }
 
         footer {
-            margin-top: auto;
+            margin-top: 40px;
             padding: 20px 0 10px 0;
             color: var(--text-muted);
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             text-align: center;
             position: relative;
             z-index: 1;
+            animation: slideUp 0.8s ease-out 0.3s both;
+        }
+
+        footer a {
+            color: var(--accent-gold);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        footer a:hover {
+            color: var(--accent-light-blue);
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -307,18 +495,32 @@
 
     <h1>Esquema de Conexiones Electrónicas</h1>
     <div class="subtitle">
-        Visualización de la arquitectura de control dual. Pasa el cursor por encima de las líneas en el diagrama para resaltar y ver detalles técnicos del conexionado.
+        Sistema de Control Dual para Grúa Torre Inteligente · Interactúa con los componentes del diagrama haciendo clic para ver detalles técnicos
     </div>
 
     <div class="legend-container">
-        <div class="legend-item"><div class="legend-color" style="background: #ef4444;"></div>VCC 5V/3.3V (Lógica)</div>
-        <div class="legend-item"><div class="legend-color" style="background: #e11d48; border: 1px dashed white;"></div>VCC 9V/12V (Potencia Motores)</div>
-        <div class="legend-item"><div class="legend-color" style="background: #4b5563;"></div>GND (Tierra Común)</div>
-        <div class="legend-item"><div class="legend-color" style="background: #eab308;"></div>UART (Comunicación Serie)</div>
+        <div class="legend-item"><div class="legend-color" style="background: #ef4444;"></div>VCC 5V/3.3V</div>
+        <div class="legend-item"><div class="legend-color" style="background: #e11d48; border: 1px dashed rgba(255,255,255,0.3);"></div>VCC 12V (Potencia)</div>
+        <div class="legend-item"><div class="legend-color" style="background: #4b5563;"></div>GND (Tierra)</div>
+        <div class="legend-item"><div class="legend-color" style="background: #eab308;"></div>UART (Serie)</div>
         <div class="legend-item"><div class="legend-color" style="background: #3b82f6;"></div>Motor Carro</div>
         <div class="legend-item"><div class="legend-color" style="background: #10b981;"></div>Motor Elevación</div>
         <div class="legend-item"><div class="legend-color" style="background: #8b5cf6;"></div>Motor Giro</div>
-        <div class="legend-item"><div class="legend-color" style="background: #ec4899;"></div>Botón de Modo</div>
+        <div class="legend-item"><div class="legend-color" style="background: #ec4899;"></div>Botón/Control</div>
+    </div>
+
+    <!-- MODAL PARA COMPONENTES -->
+    <div id="componentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Componente</h2>
+                <button class="close-btn" onclick="closeComponentModal()">&times;</button>
+            </div>
+            <img id="modalImage" class="component-image" src="" alt="Componente" />
+            <div id="modalModel" class="component-model"></div>
+            <div id="modalDescription" class="component-description"></div>
+            <div id="modalSpecs" class="component-specs"></div>
+        </div>
     </div>
 
     <div class="container">
@@ -342,7 +544,7 @@
                     <text x="440" y="63" class="pin-label" text-anchor="end">GND</text>
 
                     <!-- ESP32 DEV KIT -->
-                    <rect x="30" y="100" width="120" height="150" rx="8" class="component-box"/>
+                    <rect x="30" y="100" width="120" height="150" rx="8" class="component-box" data-component="esp32"/>
                     <text x="90" y="118" class="component-title">ESP32 GATEWAY</text>
                     
                     <text x="135" y="145" class="pin-label" text-anchor="end">TX2 (G17)</text>
@@ -351,7 +553,7 @@
                     <text x="135" y="215" class="pin-label" text-anchor="end">GND</text>
                     
                     <!-- ARDUINO NANO -->
-                    <rect x="220" y="100" width="140" height="280" rx="8" class="component-box"/>
+                    <rect x="220" y="100" width="140" height="280" rx="8" class="component-box" data-component="arduino"/>
                     <text x="290" y="118" class="component-title">ARDUINO NANO</text>
                     
                     <text x="230" y="145" class="pin-label">RX (D0)</text>
@@ -374,7 +576,7 @@
                     <text x="330" y="290" class="pin-label" text-anchor="end">D9 (PWMC)</text>
 
                     <!-- JOYSTICK 1 (CARRO / GIRO) -->
-                    <rect x="30" y="300" width="120" height="110" rx="6" class="component-box"/>
+                    <rect x="30" y="300" width="120" height="110" rx="6" class="component-box" data-component="joystick1"/>
                     <text x="90" y="318" class="component-title">JOYSTICK 1</text>
                     <text x="90" y="330" class="component-title" style="font-size: 8px; fill: var(--text-muted);">CARRO & GIRO</text>
                     <text x="135" y="350" class="pin-label" text-anchor="end">5V (VCC)</text>
@@ -383,7 +585,7 @@
                     <text x="135" y="395" class="pin-label" text-anchor="end">VRY -> A2</text>
 
                     <!-- JOYSTICK 2 (ELEVACION / BOTON MODO) -->
-                    <rect x="30" y="440" width="120" height="110" rx="6" class="component-box"/>
+                    <rect x="30" y="440" width="120" height="110" rx="6" class="component-box" data-component="joystick2"/>
                     <text x="90" y="458" class="component-title">JOYSTICK 2</text>
                     <text x="90" y="470" class="component-title" style="font-size: 8px; fill: var(--text-muted);">ELEVACIÓN & MODO</text>
                     <text x="135" y="490" class="pin-label" text-anchor="end">5V (VCC)</text>
@@ -392,7 +594,7 @@
                     <text x="135" y="535" class="pin-label" text-anchor="end">SW -> D6</text>
 
                     <!-- PUENTE H 1 (CARRO / ELEVACION) -->
-                    <rect x="440" y="100" width="140" height="200" rx="6" class="component-box"/>
+                    <rect x="440" y="100" width="140" height="200" rx="6" class="component-box" data-component="tb66121"/>
                     <text x="510" y="118" class="component-title">TB6612FNG (1)</text>
                     <text x="450" y="135" class="pin-label">VM</text>
                     <text x="450" y="150" class="pin-label">VCC</text>
@@ -410,7 +612,7 @@
                     <text x="530" y="235" class="pin-label">BO2</text>
 
                     <!-- PUENTE H 2 (GIRO) -->
-                    <rect x="440" y="330" width="140" height="150" rx="6" class="component-box"/>
+                    <rect x="440" y="330" width="140" height="150" rx="6" class="component-box" data-component="tb66122"/>
                     <text x="510" y="348" class="component-title">TB6612FNG (2)</text>
                     <text x="450" y="365" class="pin-label">VM</text>
                     <text x="450" y="380" class="pin-label">VCC</text>
@@ -423,19 +625,19 @@
                     <text x="530" y="390" class="pin-label">CO2</text>
 
                     <!-- MOTOR CARRO -->
-                    <rect x="670" y="100" width="110" height="70" rx="6" class="component-box" style="fill: #0f172a; stroke: #3b82f6;"/>
+                    <rect x="670" y="100" width="110" height="70" rx="6" class="component-box" style="fill: #0f172a; stroke: #3b82f6;" data-component="motor1"/>
                     <text x="725" y="125" class="component-title">MOTOR CARRO</text>
                     <text x="680" y="150" class="pin-label">M1+</text>
                     <text x="760" y="150" class="pin-label" text-anchor="end">M1-</text>
 
                     <!-- MOTOR ELEVACION -->
-                    <rect x="670" y="200" width="110" height="70" rx="6" class="component-box" style="fill: #0f172a; stroke: #10b981;"/>
+                    <rect x="670" y="200" width="110" height="70" rx="6" class="component-box" style="fill: #0f172a; stroke: #10b981;" data-component="motor2"/>
                     <text x="725" y="225" class="component-title">MOTOR ELEVACIÓN</text>
                     <text x="680" y="250" class="pin-label">M2+</text>
                     <text x="760" y="250" class="pin-label" text-anchor="end">M2-</text>
 
                     <!-- MOTOR GIRO -->
-                    <rect x="670" y="370" width="110" height="70" rx="6" class="component-box" style="fill: #0f172a; stroke: #8b5cf6;"/>
+                    <rect x="670" y="370" width="110" height="70" rx="6" class="component-box" style="fill: #0f172a; stroke: #8b5cf6;" data-component="motor3"/>
                     <text x="725" y="395" class="component-title">MOTOR GIRO</text>
                     <text x="680" y="420" class="pin-label">M3+</text>
                     <text x="760" y="420" class="pin-label" text-anchor="end">M3-</text>
@@ -699,11 +901,190 @@
     </div>
 
     <footer>
-        Proyecto de Grado — Milagros Llusca — Mayo 2026
+        Proyecto de Grado — <strong>Sistema de Control Dual para Grúa Torre</strong> — Milagros Llusca — Mayo 2026
     </footer>
 
     <script>
-        // Interactividad del Diagrama SVG
+        // Datos de componentes con descripciones e imágenes
+        const componentsData = {
+            esp32: {
+                title: "ESP32 Gateway",
+                model: "ESP32-DevKitC v4",
+                image: "https://images-na.ssl-images-amazon.com/images/I/61Yv8wQLqML._AC_SY355_.jpg",
+                description: "Microcontrolador de 32 bits con WiFi y Bluetooth integrados. Actúa como puerta de enlace web, recibiendo comandos desde la interfaz web y comunicándose con el Arduino Nano a través de UART serial para controlar la grúa remotamente en tiempo real.",
+                specs: [
+                    "Procesador: Dual-Core 240MHz",
+                    "Memoria: 520KB SRAM",
+                    "Conectividad: WiFi 802.11 b/g/n",
+                    "Puertos: UART, SPI, I²C",
+                    "Tensión: 3.3V nominal"
+                ]
+            },
+            arduino: {
+                title: "Arduino Nano",
+                model: "Arduino Nano v3 (ATmega328P)",
+                image: "https://images-na.ssl-images-amazon.com/images/I/61r9XY5g4EL._AC_SL1024_.jpg",
+                description: "Microcontrolador compacto que gestiona la lógica de control principal. Procesa las señales analógicas de los joysticks, genera señales PWM para regular velocidades, y coordina el control de los tres motores mediante puentes H con latencia mínima.",
+                specs: [
+                    "Procesador: ATmega328P 16MHz",
+                    "Memoria: 2KB SRAM / 32KB Flash",
+                    "Pines: 14 digitales + 8 analógicos",
+                    "Puertos: UART, SPI, I²C",
+                    "Tensión: 5V nominal"
+                ]
+            },
+            joystick1: {
+                title: "Joystick Analógico 1",
+                model: "KY-023 / Joystick Digital Dual-Axis",
+                image: "https://images-na.ssl-images-amazon.com/images/I/61FqzB7u6-L._AC_SL1500_.jpg",
+                description: "Módulo de joystick de dos ejes (X/Y) con botón pulsador integrado. El eje X controla el movimiento horizontal del carro (izquierda/derecha), mientras que el eje Y controla la rotación de la grúa, proporcionando retroalimentación analógica continua.",
+                specs: [
+                    "Rango: 0V - 5V analógico",
+                    "Eje X: Control Carro",
+                    "Eje Y: Control Giro",
+                    "Botón: Normalmente abierto",
+                    "Resolución: 10 bits ADC"
+                ]
+            },
+            joystick2: {
+                title: "Joystick Analógico 2",
+                model: "KY-023 / Joystick Digital Dual-Axis",
+                image: "https://images-na.ssl-images-amazon.com/images/I/61FqzB7u6-L._AC_SL1500_.jpg",
+                description: "Segundo joystick dedicado al control de elevación vertical. Su eje X proporciona la señal analógica para subir/bajar la carga de la grúa, mientras que el pulsador permite cambiar entre modos de operación automático y manual.",
+                specs: [
+                    "Rango: 0V - 5V analógico",
+                    "Eje X: Control Elevación",
+                    "Botón: Selector de Modo",
+                    "Resolución: 10 bits ADC",
+                    "Contacto: Debounce hardware"
+                ]
+            },
+            motor1: {
+                title: "Motor Carro",
+                model: "Motor DC 12V 300RPM (Reductor)",
+                image: "https://images-na.ssl-images-amazon.com/images/I/71jMsJ7XDPL._AC_SL1500_.jpg",
+                description: "Motor con caja reductora que impulsa el desplazamiento horizontal del carro sobre los rieles. Proporciona torque suficiente para mover carga bajo control PWM bidireccional, permitiendo movimiento suave en ambas direcciones.",
+                specs: [
+                    "Voltaje: 12V DC",
+                    "Potencia: 10-15W",
+                    "RPM: ~300 (con reducción)",
+                    "Torque: ~0.5Nm",
+                    "Control: Bidireccional (H-Bridge)"
+                ]
+            },
+            motor2: {
+                title: "Motor Elevación",
+                model: "Motor DC 12V 300RPM (Reductor)",
+                image: "https://images-na.ssl-images-amazon.com/images/I/71jMsJ7XDPL._AC_SL1500_.jpg",
+                description: "Motor con reducción destinado a levantar y bajar la carga vertical. Control PWM bidireccional garantiza movimiento lento y controlado, previniendo caídas abruptas y permitiendo parar en cualquier altura deseada.",
+                specs: [
+                    "Voltaje: 12V DC",
+                    "Potencia: 10-15W",
+                    "RPM: ~300 (con reducción)",
+                    "Torque: ~0.5Nm",
+                    "Control: Elevación precisa"
+                ]
+            },
+            motor3: {
+                title: "Motor Giro",
+                model: "Motor DC 12V 300RPM (Reductor)",
+                image: "https://images-na.ssl-images-amazon.com/images/I/71jMsJ7XDPL._AC_SL1500_.jpg",
+                description: "Motoreductor que permite girar la grúa sobre su eje vertical. Controlado por PWM bidireccional, proporciona rotación suave de 360° con velocidad variable, esencial para posicionar la carga en diferentes ángulos.",
+                specs: [
+                    "Voltaje: 12V DC",
+                    "Potencia: 10-15W",
+                    "RPM: ~300 (con reducción)",
+                    "Torque: ~0.5Nm",
+                    "Rango: 360° continuo"
+                ]
+            },
+            tb66121: {
+                title: "Puente H TB6612FNG (1)",
+                model: "TB6612FNG Dual Motor Driver",
+                image: "https://images-na.ssl-images-amazon.com/images/I/61-ZhA5QdwL._AC_SL1000_.jpg",
+                description: "Driver de motor de potencia que controla dos motores DC simultáneamente (Carro y Elevación). Recibe señales lógicas de dirección (AIN/BIN) y PWM del Arduino, amplificando la corriente para mover los motores con precisión.",
+                specs: [
+                    "Voltaje motor: 4.5V - 13.5V",
+                    "Corriente: 1.2A por canal",
+                    "Salidas: Dual H-Bridge",
+                    "Entrada lógica: 5V compatible",
+                    "Modo: Bidireccional + PWM"
+                ]
+            },
+            tb66122: {
+                title: "Puente H TB6612FNG (2)",
+                model: "TB6612FNG Dual Motor Driver",
+                image: "https://images-na.ssl-images-amazon.com/images/I/61-ZhA5QdwL._AC_SL1000_.jpg",
+                description: "Segundo driver dedicado al control del motor de giro. Proporciona amplificación de potencia y protección contra picos de corriente, permitiendo control bidireccional suave y confiable del motor rotatorio.",
+                specs: [
+                    "Voltaje motor: 4.5V - 13.5V",
+                    "Corriente: 1.2A por canal",
+                    "Salidas: Dual H-Bridge",
+                    "Entrada lógica: 5V compatible",
+                    "Protección: Termal integrada"
+                ]
+            }
+        };
+
+        // Función para abrir modal de componente
+        function openComponentModal(componentId) {
+            const component = componentsData[componentId];
+            if (!component) return;
+
+            document.getElementById('modalTitle').textContent = component.title;
+            document.getElementById('modalImage').src = component.image;
+            document.getElementById('modalModel').textContent = component.model;
+            document.getElementById('modalDescription').textContent = component.description;
+            
+            const specsHtml = `
+                <h4>Especificaciones Técnicas:</h4>
+                <ul>
+                    ${component.specs.map(spec => `<li>${spec}</li>`).join('')}
+                </ul>
+            `;
+            document.getElementById('modalSpecs').innerHTML = specsHtml;
+            
+            document.getElementById('componentModal').classList.add('show');
+        }
+
+        // Función para cerrar modal
+        function closeComponentModal() {
+            document.getElementById('componentModal').classList.remove('show');
+        }
+
+        // Cerrar modal al hacer clic fuera del contenido
+        document.getElementById('componentModal').addEventListener('click', (e) => {
+            if (e.target.id === 'componentModal') {
+                closeComponentModal();
+            }
+        });
+
+        // Hacer componentes SVG clickeables
+        function makeComponentsClickable() {
+            // Agregar eventos a todos los component-box del SVG
+            document.querySelectorAll('.component-box').forEach(box => {
+                box.style.cursor = 'pointer';
+                box.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const componentId = this.getAttribute('data-component');
+                    if (componentId) {
+                        openComponentModal(componentId);
+                    }
+                });
+            });
+        }
+
+        // Inicializar componentes clickeables cuando el SVG esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            makeComponentsClickable();
+        });
+
+        // También intentar cuando el SVG carga (en caso de que sea lazy-loaded)
+        setTimeout(() => {
+            makeComponentsClickable();
+        }, 500);
+
+        // Interactividad del Diagrama SVG (hover de cables)
         const wires = document.querySelectorAll('.connection-wire');
         const wireName = document.getElementById('wireName');
         const wireDesc = document.getElementById('wireDesc');
@@ -722,7 +1103,7 @@
             wire.addEventListener('mouseleave', () => {
                 wireName.textContent = "Pasa el cursor por encima de una conexión...";
                 wireDesc.textContent = "Haz hover sobre cualquiera de las líneas coloreadas en el diagrama para ver la información técnica de la conexión electrónica correspondiente.";
-                wireName.style.color = "var(--accent-yellow)";
+                wireName.style.color = "var(--accent-gold)";
             });
         });
 
