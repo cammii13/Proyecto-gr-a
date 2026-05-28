@@ -1,124 +1,137 @@
 import uasyncio as asyncio
 import usocket as socket
-import ujson
 from machine import UART, Pin
 
 # Configuración de hardware
-UART_TX_PIN = 17  # GPIO 17 para TX al Arduino Nano
 LED_PIN = 2       # GPIO 2 para LED de status
-BAUDRATE = 9600   # Velocidad de comunicación UART
+BAUDRATE = 9600   # Velocidad de comunicación UART (debe coincidir con SoftwareSerial del Nano)
 
 # Inicializar UART y LED
-uart = UART(2, tx=Pin(UART_TX_PIN), rx=Pin(16), baudrate=BAUDRATE)
+# RX del ESP32 es GPIO 16 (conecta al TX del SoftwareSerial de Arduino, pin 13)
+# TX del ESP32 es GPIO 17 (conecta al RX del SoftwareSerial de Arduino, pin 10)
+uart = UART(2, tx=Pin(17), rx=Pin(16), baudrate=BAUDRATE)
 led = Pin(LED_PIN, Pin.OUT)
-led.value(1)  # Encender LED al inicio
+led.value(0)  # Apagar LED al inicio
 
-# Telemetría
-current_angle = 0
-control_mode = "web"  # "web" o "manual"
+# Búfer circular para logs de depuración (últimas 50 líneas)
+logs = []
+MAX_LOGS = 50
 
-# Comandos según estándar OpenSpec (ejemplo simplificado)
-COMMANDS = {
-    'car_left': 'CL',    # Carro izquierda
-    'car_right': 'CR',   # Carro derecha
-    'elev_up': 'EU',     # Elevación arriba
-    'elev_down': 'ED',   # Elevación abajo
-    'giro_left': 'GL',   # Giro izquierda
-    'giro_right': 'GR',  # Giro derecha
-    'stop': 'S',         # Parar todos los motores
-    'mode_manual': 'MM', # Activar modo manual (joysticks)
-    'mode_web': 'MW'     # Activar modo web
-}
-
-def send_to_uart(cmd):
-    """
-    Envía comando UART al Arduino Nano.
-    """
-    if cmd in COMMANDS:
-        message = COMMANDS[cmd] + '\n'
-        uart.write(message.encode())
-        print(f"Comando enviado: {cmd}")
-    else:
-        print(f"Comando desconocido: {cmd}")
-
-def parse_cmd(request_str):
-    """
-    Parsea el parámetro cmd de la URL.
-    """
-    if 'cmd=' in request_str:
-        start = request_str.find('cmd=') + 4
-        end = request_str.find(' ', start)
-        return request_str[start:end]
-    return None
-
+def get_html_template():
+    """Retorna la plantilla HTML de estilo terminal retro."""
+    return """<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Depurador Inalámbrico - Grúa Torre</title>
+    <meta http-equiv="refresh" content="2">
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #00ff66;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 20px;
+            font-size: 14px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+        .console {
+            border: 1px solid rgba(0, 255, 102, 0.3);
+            padding: 20px;
+            background-color: #05070d;
+            min-height: 450px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 255, 102, 0.05);
+            border-radius: 12px;
+        }
+        h1 {
+            font-size: 18px;
+            margin-top: 0;
+            border-bottom: 1px solid rgba(0, 255, 102, 0.3);
+            padding-bottom: 12px;
+            color: #ffffff;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .line {
+            margin: 6px 0;
+            line-height: 1.5;
+            word-break: break-all;
+        }
+        .line::before {
+            content: "$ ";
+            color: #38bdf8;
+        }
+        .footer-text {
+            margin-top: 15px;
+            font-size: 11px;
+            color: #64748b;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="console">
+            <h1>Consola de Depuración Inalámbrica</h1>
+            {log_content}
+        </div>
+        <div class="footer-text">
+            Auto-refresco cada 2 segundos. Últimos 50 logs en RAM.
+        </div>
+    </div>
+</body>
+</html>"""
 
 async def uart_reader_task():
-    """Lee continuamente el UART y actualiza el ángulo y modo."""
-    global current_angle, control_mode
+    """Lee continuamente los logs desde la conexión serial de Arduino Nano."""
+    global logs
+    print("Tarea del lector UART iniciada...")
     while True:
         try:
-            await asyncio.sleep_ms(20)
+            await asyncio.sleep_ms(30)
             if uart.any():
                 line = uart.readline()
                 if not line:
                     continue
                 try:
+                    # Decodificar y limpiar la traza
                     s = line.decode('utf-8').strip()
+                    if s:
+                        logs.append(s)
+                        if len(logs) > MAX_LOGS:
+                            logs.pop(0)
+                        print(f"[UART LOG] {s}")
                 except Exception:
-                    continue
-                if s.startswith('ANG:'):
-                    try:
-                        val = int(s[4:])
-                        current_angle = val
-                    except Exception:
-                        pass
-                elif s == 'MOD:MANUAL':
-                    control_mode = "manual"
-                    print("Modo de control actualizado: MANUAL")
-                elif s == 'MOD:WEB':
-                    control_mode = "web"
-                    print("Modo de control actualizado: WEB")
+                    pass
         except Exception as e:
-            print('uart_reader_task error', e)
-
-def get_html():
-    """
-    Lee el archivo index.html del sistema de archivos local.
-    """
-    try:
-        with open('index.html', 'r') as f:
-            return f.read()
-    except Exception as e:
-        print("Error al leer index.html:", e)
-        return "<html><body><h1>Error 500: Archivo index.html no encontrado en la memoria del dispositivo</h1></body></html>"
-
+            print("Error en uart_reader_task:", e)
 
 async def handle_client(reader, writer):
-    """
-    Maneja las conexiones HTTP entrantes.
-    """
+    """Maneja las solicitudes HTTP entrantes y entrega la consola de logs."""
     try:
         request = await reader.read(1024)
         request_str = request.decode('utf-8')
 
         if request_str.startswith('GET / '):
-            # Servir página principal
-            html = get_html()
-            response = f"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n{html}"
-        elif request_str.startswith('GET /telemetry'):
-            # Endpoint de telemetría: devolver ángulo y modo actual en JSON
-            response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n" + ujson.dumps({"angle": current_angle, "mode": control_mode})
-        elif request_str.startswith('GET /control?'):
-            # Procesar comando
-            cmd = parse_cmd(request_str)
-            if cmd:
-                send_to_uart(cmd)
-                response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n" + ujson.dumps({"status": "ok"})
-            else:
-                response = "HTTP/1.1 400 Bad Request\r\n\r\n"
+            # Renderizar logs en orden cronológico (más recientes abajo)
+            log_lines = ""
+            for log in logs:
+                log_lines += f'<div class="line">{log}</div>'
+            
+            if not log_lines:
+                log_lines = '<div class="line" style="color: #475569;">Esperando logs de depuración del Arduino Nano...</div>'
+            
+            html = get_html_template().replace('{log_content}', log_lines)
+            response = f"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n{html}"
         else:
-            # Página no encontrada
-            response = "HTTP/1.1 404 Not Found\r\n\r\n"
+            response = "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n"
 
         await writer.awrite(response.encode('utf-8'))
     except Exception as e:
@@ -127,23 +140,19 @@ async def handle_client(reader, writer):
         await writer.aclose()
 
 async def main():
-    """
-    Función principal: inicia el servidor web.
-    """
-    # Iniciar tarea que lee UART continuamente
+    """Inicia el servidor HTTP de depuración."""
     try:
         asyncio.create_task(uart_reader_task())
     except Exception:
-        # compatibilidad con versiones antiguas de uasyncio
         asyncio.ensure_future(uart_reader_task())
 
     server = await asyncio.start_server(handle_client, '0.0.0.0', 80)
-    print("Servidor web asíncrono iniciado en puerto 80")
-    led.value(0)  # Apagar LED cuando servidor esté listo (opcional)
+    print("Servidor web asíncrono de depuración iniciado en el puerto 80")
+    led.value(1)  # Encender LED para indicar que el sistema está listo
     await server.wait_closed()
 
-# Ejecutar el servidor
+# Iniciar servidor
 try:
     asyncio.run(main())
 except KeyboardInterrupt:
-    print("\nServidor web detenido desde el teclado.")
+    print("\nServidor web detenido.")
